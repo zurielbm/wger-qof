@@ -20,6 +20,12 @@ x-wger-env: &wger-env
   DJANGO_DB_PASSWORD: ${POSTGRES_PASSWORD:-wger}
   TIME_ZONE: ${TIME_ZONE:-UTC}
   TZ: ${TIME_ZONE:-UTC}
+  # PowerSync (mobile app offline sync). The entrypoint creates this storage
+  # role/schema in postgres on boot; the app is told to reach the sync service
+  # at POWERSYNC_URL (set it to the public domain routed to the powersync
+  # service, e.g. https://sync.example.com).
+  PS_STORAGE_PG_URI: postgres://powersync_storage:${POWERSYNC_STORAGE_PASSWORD:-powersync_password}@db:5432/wger
+  POWERSYNC_URL: ${POWERSYNC_URL:-}
 
 services:
   web:
@@ -66,6 +72,16 @@ services:
       - wger
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    # wal_level=logical is required by PowerSync's replication
+    command: [
+      "postgres",
+      "-c", "wal_level=logical",
+      "-c", "shared_buffers=256MB",
+      "-c", "effective_cache_size=768MB",
+      "-c", "work_mem=8MB",
+      "-c", "random_page_cost=1.1",
+      "-c", "max_connections=50"
+    ]
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "wger" ]
       interval: 10s
@@ -85,6 +101,33 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  powersync:
+    image: journeyapps/powersync-service:latest
+    command: [ "start", "-r", "unified" ]
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/powersync.yaml
+      PS_PORT: "8080"
+      # Replicates the wger database and reads the JWT verification keys from
+      # the web container
+      PS_DATABASE_URI: postgres://wger:${POSTGRES_PASSWORD:-wger}@db:5432/wger
+      PS_STORAGE_PG_URI: postgres://powersync_storage:${POWERSYNC_STORAGE_PASSWORD:-powersync_password}@db:5432/wger
+      PS_JWKS_URL: http://web:3009/api/v2/powersync-keys
+    volumes:
+      - ./config/powersync:/config:ro
+    expose:
+      - "8080"
+    # On both networks like web: "wger" to reach db, "dokploy-network" so
+    # Traefik can route the public sync domain to it
+    networks:
+      - wger
+      - dokploy-network
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_healthy
     restart: unless-stopped
 
   celery_worker:

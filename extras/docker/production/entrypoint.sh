@@ -73,6 +73,9 @@ then
     exit 1
 fi
 
+# Create the PowerSync storage role/schema (no-op if PS_STORAGE_PG_URI unset)
+python3 manage.py setup-powersync-storage
+
 # Set the site URL
 python3 manage.py set-site-url
 
