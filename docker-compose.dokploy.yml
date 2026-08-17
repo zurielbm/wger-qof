@@ -34,6 +34,13 @@ services:
       - media:/home/wger/media
     expose:
       - "3009"
+    # web sits on both networks: "wger" to reach db/cache, "dokploy-network" so
+    # Traefik can route the domain to it. Listing dokploy-network explicitly
+    # keeps Dokploy's own network injection from replacing the private network
+    # (https://github.com/Dokploy/dokploy/issues/3562).
+    networks:
+      - wger
+      - dokploy-network
     depends_on:
       db:
         condition: service_healthy
@@ -55,6 +62,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wger}
       POSTGRES_DB: wger
       TZ: ${TIME_ZONE:-UTC}
+    networks:
+      - wger
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -67,6 +76,8 @@ services:
 
   cache:
     image: redis:7-alpine
+    networks:
+      - wger
     volumes:
       - redis-data:/data
     healthcheck:
@@ -81,6 +92,8 @@ services:
     command: /start-worker
     env_file: ./config/prod.env
     environment: *wger-env
+    networks:
+      - wger
     volumes:
       - media:/home/wger/media
     depends_on:
@@ -99,6 +112,8 @@ services:
     command: /start-beat
     env_file: ./config/prod.env
     environment: *wger-env
+    networks:
+      - wger
     volumes:
       - celery-beat:/home/wger/beat
     depends_on:
@@ -112,3 +127,8 @@ volumes:
   celery-beat:
   static:
   media:
+
+networks:
+  wger:
+  dokploy-network:
+    external: true
