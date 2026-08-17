@@ -116,8 +116,9 @@ services:
       PS_JWKS_URL: http://web:3009/api/v2/powersync-keys
     volumes:
       - ./config/powersync:/config:ro
-    expose:
-      - "8080"
+    # Published on host port 3010 (container listens on 8080)
+    ports:
+      - "3010:8080"
     # On both networks like web: "wger" to reach db, "dokploy-network" so
     # Traefik can route the public sync domain to it
     networks:
