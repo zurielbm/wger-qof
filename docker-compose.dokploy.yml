@@ -55,7 +55,7 @@ services:
       - static:/wger/static:ro
       - media:/wger/media:ro
     expose:
-      - "80"
+      - "3009"
     depends_on:
       - web
     restart: unless-stopped
