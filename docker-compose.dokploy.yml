@@ -118,7 +118,7 @@ services:
       - ./config/powersync:/config:ro
     # Published on host port 3010 (container listens on 8080)
     ports:
-      - "3010:8080"
+      - "3011:8080"Ud
     # On both networks like web: "wger" to reach db, "dokploy-network" so
     # Traefik can route the public sync domain to it
     networks:
