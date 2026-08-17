@@ -24,7 +24,11 @@ from django.contrib.sitemaps.views import (
     index,
     sitemap,
 )
-from django.urls import path
+from django.urls import (
+    path,
+    re_path,
+)
+from django.views.static import serve
 
 # Third Party
 from drf_spectacular.views import (
@@ -399,6 +403,14 @@ urlpatterns += [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     # urlpatterns.append(path('__debug__/', include('debug_toolbar.urls')))
+elif getattr(settings, 'SERVE_MEDIA_FILES', False):
+    urlpatterns += [
+        re_path(
+            rf'^{settings.MEDIA_URL.lstrip("/")}(?P<path>.*)$',
+            serve,
+            {'document_root': settings.MEDIA_ROOT},
+        ),
+    ]
 
 if settings.EXPOSE_PROMETHEUS_METRICS:
     urlpatterns += [path('prometheus/', include('django_prometheus.urls'))]

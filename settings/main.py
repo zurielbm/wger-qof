@@ -147,6 +147,12 @@ STATIC_URL = env.str('STATIC_URL', '/static/')
 
 LOGIN_REDIRECT_URL = env.str('LOGIN_REDIRECT_URL', '/')
 
+# Serve static and media files from the application itself instead of a
+# reverse proxy (used when deploying without nginx in front of gunicorn)
+if env.bool('DJANGO_SERVE_STATIC_FILES', False):
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+SERVE_MEDIA_FILES = env.bool('DJANGO_SERVE_MEDIA_FILES', False)
+
 # Allow all hosts to access the application. Change if used in production.
 ALLOWED_HOSTS = [
     '*',
